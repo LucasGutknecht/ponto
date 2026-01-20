@@ -304,6 +304,103 @@ impl PontoApp {
         let mut input = String::new();
         let _ = io::stdin().read_line(&mut input);
     }
+
+    fn remover_registro() {
+        let records = Self::load_records();
+
+        if records.is_empty() {
+            println!("\n✗ Nenhum registro encontrado para remover.");
+            Self::pause();
+            return;
+        }
+
+        println!("\n═══════════════════════════════════════");
+        println!("       REMOVER REGISTRO DE DIA");
+        println!("═══════════════════════════════════════");
+        println!("\nRegistros disponíveis:\n");
+
+        for (i, record) in records.iter().enumerate() {
+            if let Some(data) = &record.data {
+                let total_str = if let Some(total) = record.total_horas {
+                    let hours = total as u32;
+                    let minutes = ((total - hours as f32) * 60.0) as u32;
+                    format!(" - {}h{}m", hours, minutes)
+                } else {
+                    " - (em andamento)".to_string()
+                };
+                println!("  [{}] {}{}", i + 1, data, total_str);
+            }
+        }
+
+        println!("\n  [0] Cancelar");
+        println!("\n═══════════════════════════════════════");
+
+        print!("\nDigite o número do registro para remover: ");
+        let _ = io::stdout().flush();
+
+        let mut input = String::new();
+        if io::stdin().read_line(&mut input).is_err() {
+            println!("\n✗ Erro ao ler entrada.");
+            Self::pause();
+            return;
+        }
+
+        let choice: usize = match input.trim().parse() {
+            Ok(n) => n,
+            Err(_) => {
+                println!("\n✗ Opção inválida.");
+                Self::pause();
+                return;
+            }
+        };
+
+        if choice == 0 {
+            println!("\n✓ Operação cancelada.");
+            Self::pause();
+            return;
+        }
+
+        if choice > records.len() {
+            println!("\n✗ Opção inválida.");
+            Self::pause();
+            return;
+        }
+
+        let record_to_remove = &records[choice - 1];
+        let data_to_remove = record_to_remove.data.clone();
+
+        print!(
+            "\nTem certeza que deseja remover o registro de {}? (s/N): ",
+            data_to_remove.as_deref().unwrap_or("data desconhecida")
+        );
+        let _ = io::stdout().flush();
+
+        let mut confirm = String::new();
+        if io::stdin().read_line(&mut confirm).is_err() {
+            println!("\n✗ Erro ao ler entrada.");
+            Self::pause();
+            return;
+        }
+
+        if confirm.trim().to_lowercase() == "s" {
+            let new_records: Vec<PontoApp> = records
+                .into_iter()
+                .enumerate()
+                .filter(|(i, _)| *i != choice - 1)
+                .map(|(_, r)| r)
+                .collect();
+
+            Self::save_records(&new_records);
+            println!(
+                "\n✓ Registro de {} removido com sucesso!",
+                data_to_remove.as_deref().unwrap_or("data desconhecida")
+            );
+        } else {
+            println!("\n✓ Operação cancelada.");
+        }
+
+        Self::pause();
+    }
 }
 
 fn main() {
@@ -337,6 +434,7 @@ fn main() {
             MenuOption::new("Ver horas do dia", move || {
                 app_clone5.borrow().ver_horas_dia();
             }),
+            MenuOption::new("Remover Registro", || PontoApp::remover_registro()),
             MenuOption::new("Sair", || std::process::exit(0)),
         ];
 
